@@ -4,8 +4,8 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 
-#define STASSID "yourwifis"
-#define STAPSK "yourpassword"
+#define STASSID "wifi"
+#define STAPSK "password"
 
 const char *ssid = STASSID;
 const char *password = STAPSK;
@@ -16,8 +16,8 @@ const int led = 12;
 const int relay = 15;
 const int btn = 13;
 
-int buttonState = 0;
-int powerState = 0;
+int buttonState = LOW;
+int powerState = LOW;
 
 void handleRoot()
 {
@@ -43,16 +43,18 @@ void handleNotFound()
 
 void turnon()
 {
-  digitalWrite(led, 1);
-  digitalWrite(relay, 1);
-  powerState = 1;
+  Serial.println("turn on");
+  digitalWrite(led, HIGH);
+  digitalWrite(relay, HIGH);
+  powerState = HIGH;
 }
 
 void turnoff()
 {
-  digitalWrite(led, 0);
-  digitalWrite(relay, 0);
-  powerState = 0;
+  Serial.println("turn off");
+  digitalWrite(led, LOW);
+  digitalWrite(relay, LOW);
+  powerState = LOW;
 }
 
 void setup(void)
@@ -60,6 +62,8 @@ void setup(void)
   pinMode(led, OUTPUT);
   pinMode(relay, OUTPUT);
   pinMode(btn, INPUT);
+
+  turnoff();
   Serial.begin(9600);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -68,9 +72,9 @@ void setup(void)
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED)
   {
-    digitalWrite(led, 1);
+    digitalWrite(led, HIGH);
     delay(500);
-    digitalWrite(led, 0);
+    digitalWrite(led, LOW);
     Serial.print(".");
   }
   Serial.println("");
@@ -78,7 +82,6 @@ void setup(void)
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-  turnoff();
 
   if (MDNS.begin("esp8266"))
   {
@@ -112,9 +115,10 @@ void loop(void)
   server.handleClient();
   MDNS.update();
   buttonState = digitalRead(btn);
-  if (buttonState == HIGH)
+  if (buttonState == LOW)
   {
-    if (powerState == 0)
+    Serial.println("button click");
+    if (powerState == LOW)
     {
       turnon();
     }
@@ -122,5 +126,6 @@ void loop(void)
     {
       turnoff();
     }
+    delay(1000);
   }
 }
