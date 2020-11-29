@@ -44,7 +44,7 @@ void handleNotFound()
 void turnon()
 {
   Serial.println("turn on");
-  digitalWrite(led, HIGH);
+  digitalWrite(led, LOW);
   digitalWrite(relay, HIGH);
   powerState = HIGH;
 }
@@ -52,7 +52,7 @@ void turnon()
 void turnoff()
 {
   Serial.println("turn off");
-  digitalWrite(led, LOW);
+  digitalWrite(led, HIGH);
   digitalWrite(relay, LOW);
   powerState = LOW;
 }
