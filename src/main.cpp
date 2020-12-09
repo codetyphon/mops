@@ -47,13 +47,8 @@ void handleNotFound()
 void turnon()
 {
   Serial.println("turn on");
-<<<<<<< HEAD
   digitalWrite(led, LOW);    //led是低电平触发
   digitalWrite(relay, HIGH); //继电器是高电平触发
-=======
-  digitalWrite(led, LOW);
-  digitalWrite(relay, HIGH);
->>>>>>> 20eaf0d792630f5b25f7593359693c7c496e78ae
   powerState = HIGH;
 }
 
