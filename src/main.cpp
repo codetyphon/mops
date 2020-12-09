@@ -3,14 +3,17 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#include <WiFiManager.h>
 
-#define STASSID "wifi"
-#define STAPSK "password"
+#define STASSID "ConfigWiFi"
+#define STAPSK "codetyphon"
+#define MDNSNAME "MopsPower"
 
 const char *ssid = STASSID;
 const char *password = STAPSK;
-
-ESP8266WebServer server(80);
+const char *name = MDNSNAME;
+const int port = 18650;
+ESP8266WebServer server(port);
 
 const int led = 12;
 const int relay = 15;
@@ -21,7 +24,7 @@ int powerState = LOW;
 
 void handleRoot()
 {
-  server.send(200, "text/plain", "hello from esp8266!");
+  server.send(200, "text/plain", "mops switch!");
 }
 
 void handleNotFound()
@@ -44,15 +47,15 @@ void handleNotFound()
 void turnon()
 {
   Serial.println("turn on");
-  digitalWrite(led, HIGH);
-  digitalWrite(relay, HIGH);
+  digitalWrite(led, LOW);    //led是低电平触发
+  digitalWrite(relay, HIGH); //继电器是高电平触发
   powerState = HIGH;
 }
 
 void turnoff()
 {
   Serial.println("turn off");
-  digitalWrite(led, LOW);
+  digitalWrite(led, HIGH);
   digitalWrite(relay, LOW);
   powerState = LOW;
 }
@@ -64,26 +67,18 @@ void setup(void)
   pinMode(btn, INPUT);
 
   turnoff();
-  Serial.begin(9600);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.println("connection to wifi...");
 
-  // Wait for connection
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    digitalWrite(led, HIGH);
-    delay(500);
-    digitalWrite(led, LOW);
-    Serial.print(".");
-  }
+  Serial.begin(9600);
+
+  WiFiManager wifiManager;
+  wifiManager.autoConnect(ssid, password);
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  if (MDNS.begin("esp8266"))
+  if (MDNS.begin(name))
   {
     Serial.println("MDNS responder started");
   }
@@ -105,15 +100,15 @@ void setup(void)
   });
 
   server.onNotFound(handleNotFound);
-
   server.begin();
+  MDNS.addService("http", "tcp", port);
   Serial.println("HTTP server started");
 }
 
 void loop(void)
 {
-  server.handleClient();
   MDNS.update();
+  server.handleClient();
   buttonState = digitalRead(btn);
   if (buttonState == LOW)
   {
