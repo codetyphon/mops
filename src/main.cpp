@@ -1,19 +1,22 @@
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <WiFiClient.h>
-#include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
-#include <WiFiManager.h>
+#include <ESP8266WiFi.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
 
-#define STASSID "ConfigWiFi"
-#define STAPSK "codetyphon"
 #define MDNSNAME "MopsPower"
-
-const char *ssid = STASSID;
-const char *password = STAPSK;
+#define AP_SSID "MopsPower"
+#define AP_PASS "codetyphon"
 const char *name = MDNSNAME;
+const char *PARAM_POWER = "power";
 const int port = 18650;
-ESP8266WebServer server(port);
+AsyncWebServer server(port);
+
+void notFound(AsyncWebServerRequest *request)
+{
+  request->send(404, "text/plain", "Not found");
+}
 
 const int led = 12;
 const int relay = 15;
@@ -21,28 +24,6 @@ const int btn = 13;
 
 int buttonState = LOW;
 int powerState = LOW;
-
-void handleRoot()
-{
-  server.send(200, "text/plain", "mops switch!");
-}
-
-void handleNotFound()
-{
-  String message = "File Not Found\n\n";
-  message += "URI: ";
-  message += server.uri();
-  message += "\nMethod: ";
-  message += (server.method() == HTTP_GET) ? "GET" : "POST";
-  message += "\nArguments: ";
-  message += server.args();
-  message += "\n";
-  for (uint8_t i = 0; i < server.args(); i++)
-  {
-    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
-  }
-  server.send(404, "text/plain", message);
-}
 
 void turnon()
 {
@@ -62,6 +43,9 @@ void turnoff()
 
 void setup(void)
 {
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAP(AP_SSID, AP_PASS);
+
   pinMode(led, OUTPUT);
   pinMode(relay, OUTPUT);
   pinMode(btn, INPUT);
@@ -69,13 +53,7 @@ void setup(void)
   turnoff();
 
   Serial.begin(9600);
-
-  WiFiManager wifiManager;
-  wifiManager.autoConnect(ssid, password);
   Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
-  Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
   if (MDNS.begin(name))
@@ -83,23 +61,43 @@ void setup(void)
     Serial.println("MDNS responder started");
   }
 
-  server.on("/", handleRoot);
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(200, "text/plain", "MopsPower"); });
 
-  server.on("/on", []() {
-    turnon();
-    server.send(200, "text/plain", "power on");
-  });
+  server.on("/api/status", HTTP_POST, [](AsyncWebServerRequest *request)
+            {
+              String power;
+              String message;
+              if (request->hasParam(PARAM_POWER))
+              {
+                power = request->getParam(PARAM_POWER)->value();
+                if (power == "on")
+                {
+                  turnon();
+                  message = "on";
+                }
+                if (power == "off")
+                {
+                  turnoff();
+                  message = "off";
+                }
+              }
+              else
+              {
+                message = "err";
+              }
+              request->send(200, "text/plain", message);
+            });
 
-  server.on("/off", []() {
-    turnoff();
-    server.send(200, "text/plain", "power off");
-  });
+  server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+              String state;
+              state = String(powerState);
+              request->send(200, "text/plain", "Hello, GET: " + state);
+            });
 
-  server.on("/status", []() {
-    server.send(200, "text/plain", String(powerState));
-  });
-
-  server.onNotFound(handleNotFound);
+  server.onNotFound(notFound);
+  AsyncElegantOTA.begin(&server); // Start ElegantOTA
   server.begin();
   MDNS.addService("http", "tcp", port);
   Serial.println("HTTP server started");
@@ -108,7 +106,6 @@ void setup(void)
 void loop(void)
 {
   MDNS.update();
-  server.handleClient();
   buttonState = digitalRead(btn);
   if (buttonState == LOW)
   {
