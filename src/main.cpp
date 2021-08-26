@@ -91,9 +91,12 @@ void setup(void)
 
   server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-              String state;
-              state = String(powerState);
-              request->send(200, "text/plain", "Hello, GET: " + state);
+              String state = "off";
+              if (powerState == 1)
+              {
+                state = "on";
+              }
+              request->send(200, "text/plain", "power:" + state);
             });
 
   server.onNotFound(notFound);

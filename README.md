@@ -33,7 +33,7 @@ MOPS插座，芯片为esp_wroom_02。出厂固件未知，目前配套APP尚不�
 
 刷固件时，需让io0接地。然后如图，用鳄鱼夹刷固件。
 
-![](./pin.png)
+![](pin.png)
 
 红色文字的是USB转ttl的pin，黄色文字是板载pin。
 
@@ -42,12 +42,25 @@ MOPS插座，芯片为esp_wroom_02。出厂固件未知，目前配套APP尚不�
 
 开：
 
-http://esp8266.local/on
+```
+curl --location --request POST '192.168.4.1:18650/api/status?power=off' \
+--header 'Content-Type: application/x-www-form-urlencoded' \
+--data-urlencode 'power=on'
+```
 
 关：
 
-http://esp8266.local/off
+```
+curl --location --request POST '192.168.4.1:18650/api/status?power=off' \
+--header 'Content-Type: application/x-www-form-urlencoded' \
+--data-urlencode 'power=off'
+```
 
 状态：
 
-http://esp8266.local/status
+```
+curl --location --request GET '192.168.4.1:18650/api/status'
+```
+
+OTA升级
+http://192.168.4.1:18650/update
